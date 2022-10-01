@@ -20,13 +20,19 @@ def transform_data(raw_data):
     for actor1, actor2, film in raw_data:
         # add both in reciprocally
         if actor1 in transformed_data:
-            transformed_data[actor1]["actors"].add(actor2)
+            # add actor AND the film they acted in together
+            transformed_data[actor1][actor2] = film
+            # transformed_data[actor1]["actors"].add(actor2)
         else:
-            transformed_data[actor1] = {"movie": film, "actors": {actor2}}
+            # store dictionary with actors as keys and films they acted in together as elements
+            transformed_data[actor1] = {actor2: film}
+            # transformed_data[actor1] = {"movie": film, "actors": {actor2}}
         if actor2 in transformed_data:
-            transformed_data[actor2]["actors"].add(actor1)
+            transformed_data[actor2][actor1] = film
+            # transformed_data[actor2]["actors"].add(actor1)
         else:
-            transformed_data[actor2] = {"movie": film, "actors": {actor1}}
+            transformed_data[actor2] = {actor1: film}
+            # transformed_data[actor2] = {"movie": film, "actors": {actor1}}
     
     # return {(actor1, actor2): film for (actor1, actor2, film) in raw_data}
     return transformed_data
@@ -48,7 +54,8 @@ def acted_together(transformed_data, actor_id_1, actor_id_2):
     if actor_id_1 == actor_id_2:
        return actor_id_1 in transformed_data 
    
-    return actor_id_1 in transformed_data and actor_id_2 in transformed_data[actor_id_1]['actors']
+    # return actor_id_1 in transformed_data and actor_id_2 in transformed_data[actor_id_1]['actors']
+    return actor_id_1 in transformed_data and actor_id_2 in transformed_data[actor_id_1]
     
     
     
@@ -65,7 +72,8 @@ def actors_with_bacon_number(transformed_data, n):
     """
     baconID = 4724
     
-    acted_with_bacon = transformed_data[baconID]['actors']
+    # acted_with_bacon = transformed_data[baconID]['actors']
+    acted_with_bacon = set(transformed_data[baconID].keys())
     bacon_num_actors = [acted_with_bacon]
     visited = acted_with_bacon.copy()
     visited.add(baconID)
@@ -78,14 +86,18 @@ def actors_with_bacon_number(transformed_data, n):
             return acted_with_bacon
         i = 1
         while i < n and bacon_num_actors[i-1]:
-            actors_to_add = set()
+            # actors_to_add = set()
             for prev_actor in bacon_num_actors[i-1]:
                 # get all the actors on this level (bacon num level)
-                temp_actors = set()
+                # temp_actors = set()
                 # path_to_current = [4724]
-                for actor in transformed_data[prev_actor]['actors']:
+                if len(bacon_num_actors) <= i:
+                    bacon_num_actors.append(set())
+                # for actor in transformed_data[prev_actor]['actors']:
+                for actor in transformed_data[prev_actor]:
                     if actor not in visited:
-                        temp_actors.add(actor)
+                        # temp_actors.add(actor)
+                        bacon_num_actors[i].add(actor)
                         visited.add(actor)
                         # keep track of the paths to each actor from bacon levels
                         # if prev_actor in paths:
@@ -97,9 +109,9 @@ def actors_with_bacon_number(transformed_data, n):
                         #     paths[actor] = temp_copy # is .copy() needed?
                         # else:
                         #     paths[actor] = [4724, actor]
-                actors_to_add = actors_to_add.union(temp_actors)
+                # actors_to_add = actors_to_add.union(temp_actors)
                 
-            bacon_num_actors.append(actors_to_add)
+            # bacon_num_actors.append(actors_to_add)
             i += 1
         if not bacon_num_actors[i-1]:
             return set()
@@ -128,7 +140,8 @@ def find_path(transformed_data, goal_actor, start_id=4724):
     
     paths = {}
     
-    acted_with_start_actor = transformed_data[start_id]['actors']
+    # acted_with_start_actor = transformed_data[start_id]['actors']
+    acted_with_start_actor = set(transformed_data[start_id].keys())
     bacon_num_actors = [acted_with_start_actor]
     visited = acted_with_start_actor.copy()
     visited.add(start_id)
@@ -147,7 +160,8 @@ def find_path(transformed_data, goal_actor, start_id=4724):
                 if len(bacon_num_actors) <= i:
                     bacon_num_actors.append(set())
                 # path_to_current = [4724]
-                for actor in transformed_data[prev_actor]['actors']:
+                # for actor in transformed_data[prev_actor]['actors']:
+                for actor in transformed_data[prev_actor]:
                     if actor not in visited:
                         bacon_num_actors[i].add(actor)
                         visited.add(actor)
@@ -288,6 +302,11 @@ def bacon_path(transformed_data, actor_id):
 def actor_to_actor_path(transformed_data, actor_id_1, actor_id_2):
     return find_path(transformed_data, actor_id_2, actor_id_1)
 
+def movie_path(transformed_data, path):
+    movies = []
+    for i in range(len(path) - 1):
+        movies.append(transformed_data[path[i]][path[i+1]])
+    return movies
 
 def actor_path(transformed_data, actor_id_1, goal_test_function):
     raise NotImplementedError("Implement me!")
@@ -300,22 +319,26 @@ def actors_connecting_films(transformed_data, film1, film2):
 if __name__ == "__main__":
     with open("Lab 3/bacon/resources/large.pickle", "rb") as f:
         f2 = open("Lab 3/bacon/resources/names.pickle", "rb")
+        f3 = open("Lab 3/bacon/resources/movies.pickle", "rb")
         db = pickle.load(f)
         # print(db)
         # print(actors_with_bacon_number(transform_data(db), 6))
         # print(pickle.load(f2)["Robert Viharo"]) # SH: 572600, RV: 109625
         # f2.close()
         namesdb = pickle.load(f2)
-        path = actor_to_actor_path(transform_data(db),namesdb["Wilbur Mack"], namesdb["Gabriel Jarret"])
+        moviesdb = pickle.load(f3)
+        path = actor_to_actor_path(transform_data(db),namesdb["Dan Fogelman"], namesdb["Vjeran Tin Turk"])
+        movie_path = movie_path(transform_data(db), path)
         # # print(namesdb['Brendan Mee'])
         # to_names = {1367972, 1345461, 1345462, 1338716}
         # print([name for name, id in namesdb.items() if id in to_names])
         names_list = []
-        for actorid in path:
-            names_list.extend([name for name, id in namesdb.items() if id == actorid])
+        for movieid in movie_path:
+            names_list.extend([name for name, id in moviesdb.items() if id == movieid])
         print(names_list)
         # print([name for name, id in namesdb.items() if id in path])
         f2.close()
+        f3.close()
 
     # additional code here will be run only when lab.py is invoked directly
     # (not when imported from test.py), so this is a good place to put code
